@@ -1,0 +1,85 @@
+{
+  "name": "deepbasis",
+  "version": "1.0.0",
+  "description": "Process unstructrued data to gain Insights",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node-dev -r tsconfig-paths/register src/index.ts",
+    "lint": "eslint 'src/**/*.ts'",
+    "lint:fix": "eslint 'src/**/*.ts' --fix",
+    "setup:test-db": "bash scripts/init-test-database.sh",
+    "cleanup:test-db": "bash scripts/cleanup-test-database.sh",
+    "pretest": "npm run setup:test-db",
+    "test": "jest",
+    "posttest": "npm run cleanup:test-db",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "typecheck": "tsc --noEmit",
+    "precommit": "lint-staged",
+    "prepare": "",
+    "db:init": "bash scripts/init-database.sh",
+    "clean": "rimraf dist",
+    "test:ci": "jest --ci --coverage --runInBand"
+  },
+  "keywords": [
+    "typescript",
+    "nodejs",
+    "enterprise",
+    "awilix",
+    "express",
+    "dependency-injection"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "git add"
+    ]
+  },
+  "dependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.9.3",
+    "awilix": "^12.0.3",
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.2",
+    "module-alias": "^2.2.3",
+    "pg": "^8.13.1",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.20",
+    "uuid": "^11.0.3",
+    "winston": "^3.17.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@types/bcrypt": "^5.0.2",
+    "@types/jest": "^29.5.14",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/module-alias": "^2.0.4",
+    "@types/supertest": "^6.0.2",
+    "@typescript-eslint/parser": "^8.15.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.3.3",
+    "rimraf": "^6.0.1",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.2"
+  },
+  "_moduleAliases": {
+    "@app": "src",
+    "@modules": "src/modules",
+    "@config": "src/config",
+    "@common": "src/common"
+  }
+}
