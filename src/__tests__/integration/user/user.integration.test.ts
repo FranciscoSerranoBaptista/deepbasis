@@ -1,3 +1,6 @@
+// src/__tests__/integration/user/user.integration.test.ts
+
+import { describe, beforeAll, it, expect, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import { App } from '../../../app';
 import { TestContainer } from '../../helpers/test-container';
@@ -34,7 +37,6 @@ describe('User Integration Tests', () => {
   beforeEach(async () => {
     await TestContainer.resetDatabase();
 
-    // Create a test user and get auth token for protected routes
     const { accessToken } = await authService.register({
       name: 'Admin User',
       email: 'admin@example.com',
@@ -45,7 +47,6 @@ describe('User Integration Tests', () => {
 
   describe('User CRUD Operations', () => {
     it('should perform complete user lifecycle operations', async () => {
-      // Create new user
       const createResponse = await request(server)
         .post('/users')
         .set('Authorization', `Bearer ${authToken}`)
@@ -58,7 +59,6 @@ describe('User Integration Tests', () => {
       expect(createResponse.status).toBe(201);
       const userId = createResponse.body.id;
 
-      // Get user details
       const getResponse = await request(server)
         .get(`/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`);
@@ -70,7 +70,6 @@ describe('User Integration Tests', () => {
         email: 'john@example.com'
       });
 
-      // Update user
       const updateResponse = await request(server)
         .put(`/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`)
@@ -81,14 +80,12 @@ describe('User Integration Tests', () => {
       expect(updateResponse.status).toBe(200);
       expect(updateResponse.body.name).toBe('John Updated');
 
-      // Delete user
       const deleteResponse = await request(server)
         .delete(`/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(deleteResponse.status).toBe(204);
 
-      // Verify deletion
       const verifyResponse = await request(server)
         .get(`/users/${userId}`)
         .set('Authorization', `Bearer ${authToken}`);
@@ -97,7 +94,6 @@ describe('User Integration Tests', () => {
     });
 
     it('should list all users with pagination', async () => {
-      // Create multiple users
       const userCreationPromises = Array.from({ length: 5 }, (_, i) =>
         userService.createUser({
           name: `User ${i}`,
@@ -108,7 +104,6 @@ describe('User Integration Tests', () => {
 
       await Promise.all(userCreationPromises);
 
-      // Get users list
       const response = await request(server)
         .get('/users')
         .set('Authorization', `Bearer ${authToken}`)
@@ -135,7 +130,6 @@ describe('User Integration Tests', () => {
     });
 
     it('should prevent users from updating other users', async () => {
-      // Create two users
       const user1 = await userService.createUser({
         name: 'User One',
         email: 'user1@example.com',
@@ -147,7 +141,6 @@ describe('User Integration Tests', () => {
         password: 'Password123!'
       });
 
-      // Attempt to update admin user with user2's token
       const response = await request(server)
         .put(`/users/${user1.id}`)
         .set('Authorization', `Bearer ${user2Auth.accessToken}`)
@@ -161,7 +154,6 @@ describe('User Integration Tests', () => {
 
   describe('Error Handling', () => {
     it('should handle database connection errors gracefully', async () => {
-      // Force database disconnection
       await databaseService.disconnect();
 
       const response = await request(server)
@@ -171,7 +163,6 @@ describe('User Integration Tests', () => {
       expect(response.status).toBe(500);
       expect(response.body).toHaveProperty('message');
 
-      // Reconnect for cleanup
       await databaseService.connect();
     });
 
@@ -180,7 +171,7 @@ describe('User Integration Tests', () => {
         .post('/users')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          name: '', // Invalid empty name
+          name: '',
           email: 'invalid-email',
           password: 'short'
         });
@@ -190,7 +181,6 @@ describe('User Integration Tests', () => {
     });
 
     it('should handle concurrent operations correctly', async () => {
-      // Attempt to create multiple users with the same email concurrently
       const promises = Array.from({ length: 5 }, () =>
         request(server)
           .post('/users')

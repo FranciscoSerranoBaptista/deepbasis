@@ -1,8 +1,10 @@
 // src/__tests__/integration/auth/auth.integration.test.ts
+
 import { AwilixContainer } from 'awilix';
-import { TestContainer } from '../../helpers/test-container';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { AuthService } from '../../../modules/features/auth/auth.service';
 import { DatabaseService } from '../../../modules/infrastructure/database/database.service';
+import { TestContainer } from '../../helpers/test-container';
 
 describe('AuthService (Integration)', () => {
   let container: AwilixContainer;
@@ -32,12 +34,10 @@ describe('AuthService (Integration)', () => {
         password: 'password123'
       };
 
-      // Register
       const registerResult = await authService.register(registerDto);
       expect(registerResult).toHaveProperty('accessToken');
       expect(registerResult).toHaveProperty('refreshToken');
 
-      // Login
       const loginResult = await authService.login({
         email: registerDto.email,
         password: registerDto.password
@@ -54,10 +54,8 @@ describe('AuthService (Integration)', () => {
         password: 'password123'
       };
 
-      // First registration should succeed
       await authService.register(registerDto);
 
-      // Second registration with same email should fail
       await expect(authService.register(registerDto)).rejects.toThrow();
     });
   });
