@@ -1,21 +1,22 @@
 // src/__tests__/config/test-config.ts
+
 import { AppConfig } from '../../config/config.schema';
 
 const testConfig: AppConfig = {
   app: {
     port: 3002,
     env: 'test',
-    name: 'DeepDialogue-Test'
+    name: 'DeepBasis-Test'
   },
   database: {
     host: 'localhost',
     port: 5432,
-    username: 'deepdialogue_test_user',
-    password: 'VFXlk87OvdA++rESd7W+Og==',
-    dbName: 'deepdialogue_test'
+    username: process.env.TEST_DB_USER || 'deepdialogue_test_user',
+    password: process.env.TEST_DB_PASSWORD || 'test_password',
+    dbName: process.env.TEST_DB_NAME || 'deepdialogue_test'
   },
   logger: {
-    level: 'error',
+    level: 'error', // Use error level in tests to reduce noise
     format: 'json'
   },
   cache: {
@@ -23,7 +24,7 @@ const testConfig: AppConfig = {
     port: 6379
   },
   auth: {
-    jwtSecret: 'test-secret-key'
+    jwtSecret: 'test-jwt-secret-key'
   }
 };
 

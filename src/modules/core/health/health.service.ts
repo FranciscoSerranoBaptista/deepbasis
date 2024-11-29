@@ -1,9 +1,11 @@
 // src/modules/core/health/health.service.ts
 
 import { Lifetime } from 'awilix';
+import { sql } from 'drizzle-orm';
 import { Request, Response, Router } from 'express';
 import { Service } from '../../../common/decorators/service.decorator';
 import { IService } from '../../../common/interfaces/service.interface';
+import { DatabaseSchemaService } from '../../infrastructure/database/database.schema.service';
 import { DatabaseService } from '../../infrastructure/database/database.service';
 import { ILogger } from '../logger/logger.interface';
 
@@ -14,6 +16,7 @@ export class HealthService implements IService {
 
   constructor(
     private databaseService: DatabaseService,
+    private schemaService: DatabaseSchemaService,
     logger: ILogger
   ) {
     this.logger = logger.child({ context: HealthService.name });
@@ -47,10 +50,15 @@ export class HealthService implements IService {
 
   private async checkDatabase(): Promise<boolean> {
     try {
-      // Get the repository for any entity (e.g., User) just to test the connection
-      const repository = this.databaseService.getRepository('user');
+      const db = this.databaseService.getDb();
+      const usersTable = this.schemaService.getSchema('users');
+
       // Execute a simple query to check database connectivity
-      await repository.find({ take: 1 });
+      await db
+        .select({ count: sql<number>`count(*)` })
+        .from(usersTable)
+        .limit(1);
+
       return true;
     } catch (error) {
       this.logger.error('Database health check failed', { error });

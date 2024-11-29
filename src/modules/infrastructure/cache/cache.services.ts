@@ -7,29 +7,50 @@ import { Logger } from '../../core/logger/logger.service';
 
 @Service({ name: 'cacheService', lifetime: Lifetime.SINGLETON })
 export class CacheService implements ICacheService {
-  // Implement cache functionalities, e.g., using Redis
+  private cache: Map<string, { value: any; expiry: number | null }>;
+
   constructor(private logger: Logger) {
-    // Initialize cache connection here
+    this.cache = new Map();
   }
 
   async set(key: string, value: any, ttl?: number): Promise<void> {
-    // Implement setting a value in the cache
-    this.logger.info(`Setting cache for key: ${key}`);
-    // Example: await redisClient.set(key, JSON.stringify(value), 'EX', ttl);
+    try {
+      const expiry = ttl ? Date.now() + ttl * 1000 : null;
+      this.cache.set(key, { value, expiry });
+      this.logger.info(`Setting cache for key: ${key}`);
+    } catch (error) {
+      this.logger.error(`Error setting cache for key: ${key}`, { error });
+    }
   }
 
   async get<T>(key: string): Promise<T | null> {
-    // Implement getting a value from the cache
-    this.logger.info(`Getting cache for key: ${key}`);
-    // Example:
-    // const data = await redisClient.get(key);
-    // return data ? JSON.parse(data) as T : null;
-    return null;
+    try {
+      const cached = this.cache.get(key);
+      if (!cached) {
+        this.logger.info(`Cache miss for key: ${key}`);
+        return null;
+      }
+
+      if (cached.expiry && cached.expiry < Date.now()) {
+        this.cache.delete(key);
+        this.logger.info(`Cache expired for key: ${key}`);
+        return null;
+      }
+
+      this.logger.info(`Cache hit for key: ${key}`);
+      return cached.value as T;
+    } catch (error) {
+      this.logger.error(`Error getting cache for key: ${key}`, { error });
+      return null;
+    }
   }
 
   async delete(key: string): Promise<void> {
-    // Implement deleting a value from the cache
-    this.logger.info(`Deleting cache for key: ${key}`);
-    // Example: await redisClient.del(key);
+    try {
+      this.cache.delete(key);
+      this.logger.info(`Deleting cache for key: ${key}`);
+    } catch (error) {
+      this.logger.error(`Error deleting cache for key: ${key}`, { error });
+    }
   }
 }

@@ -1,5 +1,4 @@
 // src/modules/features/user/user.service.ts
-
 import { Lifetime } from 'awilix';
 import { Service } from '../../../common/decorators/service.decorator';
 import {
@@ -7,21 +6,23 @@ import {
   ValidationError
 } from '../../../common/utils/error-handler';
 import { hashPassword } from '../../../common/utils/helpers';
-import { User } from './user.entity';
-import UserRepository from './user.repository';
-import { CreateUserDTO, UpdateUserDTO } from './user.types';
-
-interface InternalUpdateUserDTO extends Omit<UpdateUserDTO, 'password'> {
-  passwordHash?: string;
-}
+import { User, CreateUserDTO, UpdateUserDTO } from './user.types';
+import { UserRepositoryService } from './user.repository.service';
+import { ILogger } from '../../core/logger/logger.interface';
 
 @Service({ name: 'userService', lifetime: Lifetime.SCOPED })
 export class UserService {
-  constructor(public userRepository: UserRepository) {}
+  constructor(
+    private readonly userRepository: UserRepositoryService,
+    private readonly logger: ILogger
+  ) {
+    this.logger = logger.child({ context: UserService.name });
+  }
 
   async createUser(dto: CreateUserDTO): Promise<User> {
-    const existingUser = await this.userRepository.findByEmail(dto.email);
+    this.logger.debug('Creating new user', { email: dto.email });
 
+    const existingUser = await this.userRepository.findByEmail(dto.email);
     if (existingUser) {
       throw new ValidationError('Email is already in use.');
     }
@@ -34,39 +35,70 @@ export class UserService {
       passwordHash
     });
 
+    this.logger.info('User created successfully', { userId: user.id });
     return user;
   }
 
   async getUserById(id: string): Promise<User | null> {
-    return this.userRepository.findOne(id);
+    this.logger.debug('Fetching user by ID', { userId: id });
+    return this.userRepository.findById(id);
   }
 
   async updateUser(id: string, dto: UpdateUserDTO): Promise<User> {
-    const internalDto: InternalUpdateUserDTO = { ...dto };
+    this.logger.debug('Updating user', { userId: id });
+
+    const updateData: Partial<User> = {};
+
+    if (dto.name) {
+      updateData.name = dto.name;
+    }
+
+    if (dto.email) {
+      const existingUser = await this.userRepository.findByEmail(dto.email);
+      if (existingUser && existingUser.id !== id) {
+        throw new ValidationError('Email is already in use.');
+      }
+      updateData.email = dto.email;
+    }
+
     if (dto.password) {
-      internalDto.passwordHash = await hashPassword(dto.password);
-      delete (internalDto as any).password;
+      updateData.passwordHash = await hashPassword(dto.password);
     }
-    const updatedUser = await this.userRepository.update(id, internalDto);
-    if (!updatedUser) {
-      throw new HttpError(404, 'User not found');
+
+    try {
+      const updatedUser = await this.userRepository.update(id, updateData);
+      this.logger.info('User updated successfully', { userId: id });
+      return updatedUser;
+    } catch (error) {
+      if (
+        error instanceof ValidationError &&
+        error.message === 'User not found'
+      ) {
+        throw new HttpError(404, 'User not found');
+      }
+      throw error;
     }
-    return updatedUser;
   }
 
   async deleteUser(id: string): Promise<void> {
-    const user = await this.userRepository.findOne(id);
+    this.logger.debug('Deleting user', { userId: id });
+
+    const user = await this.userRepository.findById(id);
     if (!user) {
       throw new HttpError(404, 'User not found');
     }
+
     await this.userRepository.delete(id);
+    this.logger.info('User deleted successfully', { userId: id });
   }
 
   async listUsers(): Promise<User[]> {
-    return this.userRepository.find();
+    this.logger.debug('Listing all users');
+    return this.userRepository.findAll();
   }
 
   async findUserByEmail(email: string): Promise<User | null> {
+    this.logger.debug('Finding user by email', { email });
     return this.userRepository.findByEmail(email);
   }
 }

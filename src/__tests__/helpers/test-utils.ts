@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { vi } from 'vitest';
 
 export function createMockRequest(overrides: Partial<Request> = {}): Request {
   const req = {
@@ -13,9 +14,9 @@ export function createMockRequest(overrides: Partial<Request> = {}): Request {
 
 export function createMockResponse(): Response {
   const res = {
-    json: jest.fn(),
-    status: jest.fn().mockReturnThis(),
-    send: jest.fn()
+    json: vi.fn(),
+    status: vi.fn().mockReturnThis(),
+    send: vi.fn()
   } as Partial<Response>;
   return res as Response;
 }

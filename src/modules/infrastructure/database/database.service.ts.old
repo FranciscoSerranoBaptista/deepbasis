@@ -1,0 +1,104 @@
+// src/modules/infrastructure/database/database.service.ts
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
+import { Service } from '../../../common/decorators/service.decorator';
+import { Lifetime } from 'awilix';
+import { ConfigService } from '../../../config/config.service';
+import { ILogger } from '../../core/logger/logger.interface';
+import {
+  DatabaseConfig,
+  IDatabaseService,
+  DrizzleDB
+} from './database.interface';
+import { DatabaseSchemaService } from './database.schema.service';
+
+@Service({ name: 'databaseService', lifetime: Lifetime.SINGLETON })
+export class DatabaseService implements IDatabaseService {
+  private pool: Pool | null = null;
+  private db: DrizzleDB | null = null;
+  private readonly config: DatabaseConfig;
+
+  constructor(
+    configService: ConfigService,
+    private readonly logger: ILogger,
+    private readonly schemaService: DatabaseSchemaService
+  ) {
+    this.logger = logger.child({ context: DatabaseService.name });
+    const dbConfig = configService.getAll<{ database: DatabaseConfig }>()
+      .database;
+    this.validateDatabaseConfig(dbConfig);
+    this.config = dbConfig;
+  }
+
+  async connect(): Promise<void> {
+    try {
+      this.pool = new Pool({
+        host: this.config.host,
+        port: this.config.port,
+        user: this.config.username,
+        password: this.config.password,
+        database: this.config.dbName
+      });
+
+      this.db = drizzle(this.pool, {
+        schema: this.schemaService.schemas
+      });
+
+      await this.pool.query('SELECT 1'); // Test connection
+      this.logger.info('Database connected successfully');
+    } catch (error) {
+      this.logger.error('Database connection failed', { error });
+      throw error;
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    if (this.pool) {
+      await this.pool.end();
+      this.pool = null;
+      this.db = null;
+      this.logger.info('Database connection closed');
+    }
+  }
+
+  getDb(): DrizzleDB {
+    if (!this.db) {
+      throw new Error('Database not connected');
+    }
+    return this.db;
+  }
+
+  private validateDatabaseConfig(
+    config: unknown
+  ): asserts config is DatabaseConfig {
+    if (!config || typeof config !== 'object') {
+      throw new Error(
+        'Invalid database configuration: configuration must be an object'
+      );
+    }
+
+    const c = config as Record<string, unknown>;
+
+    if (typeof c.host !== 'string') {
+      throw new Error('Invalid database configuration: host must be a string');
+    }
+    if (typeof c.port !== 'number') {
+      throw new Error('Invalid database configuration: port must be a number');
+    }
+    if (typeof c.username !== 'string') {
+      throw new Error(
+        'Invalid database configuration: username must be a string'
+      );
+    }
+    if (typeof c.password !== 'string') {
+      throw new Error(
+        'Invalid database configuration: password must be a string'
+      );
+    }
+    if (typeof c.dbName !== 'string') {
+      throw new Error(
+        'Invalid database configuration: dbName must be a string'
+      );
+    }
+  }
+}

@@ -1,0 +1,206 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Mock modules first, without referencing any variables
+vi.mock('pg', () => ({
+  Pool: vi.fn(() => ({
+    query: vi.fn(),
+    end: vi.fn()
+  }))
+}));
+
+vi.mock('drizzle-orm/node-postgres', () => ({
+  drizzle: vi.fn()
+}));
+
+vi.mock('drizzle-orm/node-postgres/migrator', () => ({
+  migrate: vi.fn()
+}));
+
+// Mock pg Pool.  This is CRUCIAL for isolating unit tests.
+// vi.mock('pg', () => {
+//   const mockQuery = vi.fn();
+//   const mockEnd = vi.fn();
+//   const Pool = vi.fn(() => ({
+//     query: mockQuery,
+//     end: mockEnd
+//   }));
+//   return { Pool };
+// });
+
+// Mock 'drizzle-orm/node-postgres' module before importing code that uses it
+// vi.mock('drizzle-orm/node-postgres', () => ({
+//   drizzle: vi.fn()
+// }));
+
+// Now import the code under test
+import { DatabaseService } from '@app/modules/infrastructure/database/database.service';
+import { DatabaseMigrationsService } from '@app/modules/infrastructure/database/database.migrations.service';
+import { DatabaseSchemaService } from '@app/modules/infrastructure/database/database.schema.service';
+import { ConfigService } from '../../../config/config.service';
+import { ILogger } from '@app/modules/core/logger/logger.interface';
+
+describe('DatabaseService', () => {
+  let databaseService: DatabaseService;
+  let configService: ConfigService;
+  let logger: ILogger;
+  let schemaService: DatabaseSchemaService;
+  let Pool: ReturnType<typeof vi.fn>; // Update this to let TypeScript know this is a mock
+
+  beforeEach(() => {
+    // After mocking 'pg', import Pool from the mocked module
+    Pool = require('pg').Pool;
+
+    configService = {
+      getAll: vi.fn().mockReturnValue({
+        database: {
+          host: 'localhost',
+          port: 5432,
+          username: 'deepdialogue_test_user',
+          password: 'DLtswBB24mvwDCtYqlPipA==',
+          dbName: 'deepdialogue_test'
+        }
+      })
+    } as unknown as ConfigService;
+
+    logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      child: vi.fn().mockReturnThis()
+    } as unknown as ILogger;
+
+    schemaService = new DatabaseSchemaService();
+
+    databaseService = new DatabaseService(configService, logger, schemaService);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should connect to the database successfully', async () => {
+    await databaseService.connect();
+
+    expect(Pool).toHaveBeenCalledWith({
+      host: 'localhost',
+      port: 5432,
+      user: 'deepdialogue_test_user',
+      password: 'DLtswBB24mvwDCtYqlPipA==',
+      database: 'deepdialogue_test'
+    });
+
+    const poolInstance = Pool.mock.instances[0];
+    expect(poolInstance.query).toHaveBeenCalledWith('SELECT 1');
+    expect(logger.info).toHaveBeenCalledWith('Database connected successfully');
+  });
+
+  it('should throw an error if database connection fails', async () => {
+    const poolInstance = Pool.mock.instances[0];
+    poolInstance.query.mockRejectedValue(new Error('Connection failed'));
+
+    await expect(databaseService.connect()).rejects.toThrow(
+      'Connection failed'
+    );
+    expect(logger.error).toHaveBeenCalledWith('Database connection failed', {
+      error: new Error('Connection failed')
+    });
+  });
+
+  it('should disconnect from the database successfully', async () => {
+    await databaseService.connect();
+    await databaseService.disconnect();
+
+    const poolInstance = Pool.mock.instances[0];
+    expect(poolInstance.end).toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith('Database connection closed');
+  });
+
+  it('should throw an error if getDb is called before connecting', () => {
+    expect(() => databaseService.getDb()).toThrow('Database not connected');
+  });
+
+  it('should return the database instance after connecting', async () => {
+    await databaseService.connect();
+    const db = databaseService.getDb();
+
+    expect(db).toBeDefined();
+    expect(require('drizzle-orm/node-postgres').drizzle).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        schema: schemaService.schemas
+      }
+    );
+  });
+});
+
+describe('DatabaseMigrationsService', () => {
+  let databaseMigrationsService: DatabaseMigrationsService;
+  let databaseService: DatabaseService;
+  let logger: ILogger;
+
+  beforeEach(async () => {
+    logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      child: vi.fn().mockReturnThis()
+    } as unknown as ILogger;
+
+    databaseService = {
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      getDb: vi.fn().mockReturnValue({})
+    } as unknown as DatabaseService;
+
+    databaseMigrationsService = new DatabaseMigrationsService(
+      databaseService,
+      logger
+    );
+
+    await databaseService.connect();
+  });
+
+  afterEach(async () => {
+    await databaseService.disconnect();
+    vi.clearAllMocks();
+  });
+
+  it('should run migrations successfully', async () => {
+    const migrate = require('drizzle-orm/node-postgres/migrator').migrate;
+    migrate.mockResolvedValue();
+
+    await databaseMigrationsService.runMigrations();
+
+    expect(logger.info).toHaveBeenCalledWith(
+      'Database migrations completed successfully'
+    );
+  });
+
+  it('should log an error if migrations fail', async () => {
+    const migrate = require('drizzle-orm/node-postgres/migrator').migrate;
+    migrate.mockRejectedValue(new Error('Migration failed'));
+
+    await expect(databaseMigrationsService.runMigrations()).rejects.toThrow(
+      'Migration failed'
+    );
+
+    expect(logger.error).toHaveBeenCalledWith('Database migrations failed', {
+      error: expect.any(Error)
+    });
+  });
+});
+
+describe('DatabaseSchemaService', () => {
+  let databaseSchemaService: DatabaseSchemaService;
+
+  beforeEach(() => {
+    databaseSchemaService = new DatabaseSchemaService();
+  });
+
+  it('should return the correct schema', () => {
+    const usersSchema = databaseSchemaService.getSchema('users');
+    expect(usersSchema).toBe(databaseSchemaService.schemas.users);
+  });
+
+  it('should throw an error if schema name is invalid', () => {
+    expect(() => databaseSchemaService.getSchema('invalid' as any)).toThrow();
+  });
+});

@@ -15,7 +15,7 @@ import { UserController } from './modules/features/user/user.controller';
 
 @Service({ name: 'server', lifetime: Lifetime.SINGLETON })
 export class Server implements IService {
-  private app: Application;
+  public readonly app: Application;
   private configService: ConfigService;
 
   constructor(

@@ -1,23 +1,72 @@
 // src/__tests__/helpers/test-factory.ts
-import { DeepPartial } from 'typeorm';
-import { User } from '../../modules/features/user/user.entity';
+
 import { DatabaseService } from '../../modules/infrastructure/database/database.service';
-import { container } from './test-container';
+import { DatabaseSchemaService } from '../../modules/infrastructure/database/database.schema.service';
+import { TestContainer } from './test-container';
 import { hashPassword } from '../../common/utils/helpers';
+import { User } from '../../modules/features/user/user.types';
 
 export class TestFactory {
-  private static dbService =
-    container.resolve<DatabaseService>('databaseService');
+  private static async getServices() {
+    const container = await TestContainer.getInstance();
+    return {
+      dbService: container.resolve<DatabaseService>('databaseService'),
+      schemaService: container.resolve<DatabaseSchemaService>('schemaService')
+    };
+  }
 
-  static async createUser(override: DeepPartial<User> = {}): Promise<User> {
-    const passwordHash = await hashPassword('password123');
+  static async createUser(override: Partial<User> = {}): Promise<User> {
+    const { dbService, schemaService } = await TestFactory.getServices();
+    const db = dbService.getDb();
+    const usersTable = schemaService.getSchema('users');
+
+    const passwordHash = await hashPassword(
+      override.passwordHash || 'password123'
+    );
+
     const defaultUser = {
       name: 'Test User',
       email: `test.${Date.now()}@example.com`,
       passwordHash
     };
 
-    const userRepo = TestFactory.dbService.getRepository(User);
-    return userRepo.create({ ...defaultUser, ...override });
+    const [user] = await db
+      .insert(usersTable)
+      .values({ ...defaultUser, ...override })
+      .returning();
+
+    return user;
+  }
+
+  static async createUsers(
+    count: number,
+    override: Partial<User> = {}
+  ): Promise<User[]> {
+    const { dbService, schemaService } = await TestFactory.getServices();
+    const db = dbService.getDb();
+    const usersTable = schemaService.getSchema('users');
+
+    const passwordHash = await hashPassword(
+      override.passwordHash || 'password123'
+    );
+
+    const users = await Promise.all(
+      Array.from({ length: count }, async (_, index) => {
+        const defaultUser = {
+          name: `Test User ${index + 1}`,
+          email: `test.${Date.now()}.${index}@example.com`,
+          passwordHash
+        };
+
+        const [user] = await db
+          .insert(usersTable)
+          .values({ ...defaultUser, ...override })
+          .returning();
+
+        return user;
+      })
+    );
+
+    return users;
   }
 }

@@ -1,23 +1,22 @@
 // src/modules/features/auth/auth.service.ts
 
-import { Service } from '../../../common/decorators/service.decorator';
 import { Lifetime } from 'awilix';
-import { UserService } from '../user/user.service';
-import {
-  LoginDTO,
-  AuthToken,
-  RegisterDTO,
-  RefreshTokenDTO
-} from './auth.types';
-import { User } from '../user/user.entity';
+import { Service } from '../../../common/decorators/service.decorator';
+import { ValidationError } from '../../../common/utils/error-handler';
 import {
   comparePasswords,
-  hashPassword,
   generateJWT,
   verifyJWT
 } from '../../../common/utils/helpers';
-import { ValidationError } from '../../../common/utils/error-handler';
 import { ConfigService } from '../../../config/config.service';
+import { UserService } from '../user/user.service';
+import { User } from '../user/user.types';
+import {
+  AuthToken,
+  LoginDTO,
+  RefreshTokenDTO,
+  RegisterDTO
+} from './auth.types';
 
 @Service({ lifetime: Lifetime.SCOPED })
 export class AuthService {

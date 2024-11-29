@@ -41,7 +41,7 @@ export class ConfigService implements IConfigService, IService {
       envConfig = require(envConfigPath).default;
     }
 
-    const defaultConfig = require('./environments/default').default;
+    const defaultConfig = require('./environments/default.ts').default;
 
     // Load environment variables from .env file
     const envFilePath = path.resolve(process.cwd(), '.env');
@@ -79,7 +79,18 @@ export class ConfigService implements IConfigService, IService {
   }
 
   public get<T>(key: string): T {
-    return key.split('.').reduce((o, i) => (o as any)[i], this.config) as T;
+    const value = key.split('.').reduce((o, i) => {
+      if (o === undefined || o === null) {
+        throw new Error(`Configuration key '${key}' not found`);
+      }
+      return (o as any)[i];
+    }, this.config);
+
+    if (value === undefined || value === null) {
+      throw new Error(`Configuration key '${key}' not found`);
+    }
+
+    return value as T;
   }
 
   public getAll<T>(): T {

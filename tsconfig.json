@@ -4,7 +4,7 @@
     "module": "CommonJS",
     "lib": ["ES2019", "ESNext.AsyncIterable"],
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "strict": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
@@ -15,7 +15,9 @@
     "noImplicitAny": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": "./",
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types"],
+    "baseUrl": ".",
     "paths": {
       "@app/*": ["src/*"],
       "@modules/*": ["src/modules/*"],
@@ -23,6 +25,6 @@
       "@common/*": ["src/common/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/__tests__/**/*"],
   "exclude": ["node_modules", "dist", "test"]
 }

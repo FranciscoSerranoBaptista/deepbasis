@@ -11,6 +11,7 @@ import {
 import { Logger } from '../../core/logger/logger.service';
 import { AuthService } from './auth.service';
 import { LoginDTO, RefreshTokenDTO, RegisterDTO } from './auth.types';
+import { ValidationError } from '../../../common/utils/error-handler';
 
 @Service({ name: 'authController', lifetime: Lifetime.SCOPED })
 export class AuthController {
@@ -79,14 +80,24 @@ export class AuthController {
   }
 
   private handleError(res: Response, error: unknown, requestId: string): void {
-    if (error instanceof ApplicationError) {
+    if (error instanceof ValidationError) {
+      this.logger.error('Validation error occurred', {
+        requestId,
+        error: error.message
+      });
+      res.status(400).json({ message: error.message });
+    } else if (error instanceof HttpError) {
+      this.logger.error('HTTP error occurred', {
+        requestId,
+        error: error.message
+      });
+      res.status(error.statusCode).json({ message: error.message });
+    } else if (error instanceof ApplicationError) {
       this.logger.error('Application error occurred', {
         requestId,
         error: error.message
       });
-      res
-        .status(error instanceof HttpError ? error.statusCode : 500)
-        .json({ message: error.message });
+      res.status(500).json({ message: error.message });
     } else if (error instanceof Error) {
       this.logger.error('Unexpected error occurred', {
         requestId,
