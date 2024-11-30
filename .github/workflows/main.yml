@@ -14,7 +14,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:13
+        image: postgres:17 # Updated to PostgreSQL 17
         ports:
           - 5432:5432
         env:
@@ -34,14 +34,16 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '18' # Update to Node.js 18
+          node-version: '20' # Node.js 20 to meet package requirements
 
       - name: Install dependencies
         run: npm install
 
       - name: Set up database
+        env:
+          PGPASSWORD: postgres # Provide the password for the "postgres" user
         run: |
-          sudo apt-get install postgresql-client
+          sudo apt-get install postgresql-client-17  # Install PostgreSQL 17 client
           psql -h localhost -U postgres -c "CREATE DATABASE test_db;"
 
       - name: Copy .env.ci to .env
