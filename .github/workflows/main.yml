@@ -38,8 +38,8 @@ jobs:
 
       - name: Add PostgreSQL repository
         run: |
-          # Add the PostgreSQL GPG key
-          wget --quiet -O /usr/share/keyrings/postgresql-archive-keyring.gpg https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          # Download the PostgreSQL GPG key
+          wget --quiet -O- https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-archive-keyring.gpg
 
           # Add the PostgreSQL repository to the sources list
           echo "deb [signed-by=/usr/share/keyrings/postgresql-archive-keyring.gpg] http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
