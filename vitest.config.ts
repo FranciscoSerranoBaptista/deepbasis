@@ -1,13 +1,10 @@
-// vitest.config.ci.ts
+// vitest.config.ts
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
   test: {
-    include: [
-      'src/__tests__/unit/**/*.test.ts',
-      'src/__tests__/integration/**/*.test.ts'
-    ],
+    include: ['src/__tests__/**/*.test.ts'],
     setupFiles: [
       'src/__tests__/setup/vitest.unit.setup.ts',
       'src/__tests__/setup/vitest.integration.setup.ts'
@@ -17,7 +14,7 @@ export default defineConfig({
     globals: true,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'], // Added lcov for CI tools
+      reporter: ['text', 'json', 'html', 'lcov'],
       reportsDirectory: './coverage',
       exclude: [
         'node_modules/',

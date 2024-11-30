@@ -27,7 +27,7 @@
     "test:integration": "vitest --config vitest.config.integration.ts",
     "test:unit:coverage": "vitest --config vitest.config.unit.ts --coverage",
     "test:integration:coverage": "vitest --config vitest.config.integration.ts --coverage",
-    "test:ci": "vitest --config vitest.config.ci.ts --coverage --runInBand",
+    "test:ci": "vitest --config vitest.config.ts --coverage --runInBand",
     "posttest": "npm run cleanup:test-db",
     "precommit": "lint-staged",
     "prepare": "",
